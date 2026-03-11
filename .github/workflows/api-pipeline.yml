@@ -1,0 +1,62 @@
+
+name: API Core Logic Pipeline
+
+# ONLY trigger when the spec file changes
+on:
+  push:
+    paths:
+      - 'specs/**'
+
+jobs:
+  # ---------------------------------------------------------
+  # STEP 1: Spectral Linting (The Quality Gate)
+  # ---------------------------------------------------------
+  lint-spec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Run Spectral Linting
+        run: spectral lint specs/petstore.yaml
+
+  # ---------------------------------------------------------
+  # STEP 2: SDK Generation (Runs only if Linting passes)
+  # ---------------------------------------------------------
+  generate-sdks:
+    needs: lint-spec
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java (Required for OpenAPI Generator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install OpenAPI Generator CLI
+        run: npm install -g @openapitools/openapi-generator-cli
+
+      - name: Generate Python SDK with Custom Template
+        run: |
+          openapi-generator-cli generate \
+            -i specs/petstore.yaml \
+            -g python \
+            -o generated-python-sdk \
+            -t templates/python
+
+      - name: Upload SDK as Downloadable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-enterprise-sdk
+          path: generated-python-sdk/

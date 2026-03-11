@@ -1,0 +1,8 @@
+extends: ["spectral:oas"]
+rules:
+  info-description:
+    description: "Every Enterprise API must have a description."
+    given: $.info
+    then:
+      field: description
+      function: truthy
